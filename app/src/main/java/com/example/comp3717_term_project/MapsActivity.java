@@ -2,7 +2,9 @@ package com.example.comp3717_term_project;
 
 import androidx.fragment.app.FragmentActivity;
 
+import android.os.AsyncTask;
 import android.content.Context;
+
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.EditText;
@@ -12,6 +14,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.gson.Gson;
 
@@ -23,9 +26,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
+    private EditText startingLocationEditText;
+
+    private LatLng startingLocation;
+    private LatLng destination;
     private ArrayList<SpeedSign> speedSigns;
 
     @Override
@@ -61,10 +68,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         System.out.println("Ready");
 //        mMap = googleMap;
 //
-//        // Add a marker in Sydney and move the camera
-//        LatLng sydney = new LatLng(49.249612, -123.000830);
-//        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+//        mMap.setOnMarkerClickListener(this);
+//
+//        startingLocation = new LatLng(49.249612, -123.000830);
+//        mMap.addMarker(new MarkerOptions().position(startingLocation).title("Starting Location"));
+//        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startingLocation, 14F));
+//        GeocodingTask task = new GeocodingTask();
+//        task.execute(startingLocation);
     }
 
 
@@ -86,6 +96,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         Log.e("data", json);
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        return false;
+    }
+
+    private class GeocodingTask extends AsyncTask<LatLng, Void, String> {
+        @Override
+        protected String doInBackground(LatLng... arg0) {
+            GetLocationNameTask getLocationNameTask = new GetLocationNameTask();
+            return getLocationNameTask.getLocationName(arg0[0]);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            startingLocationEditText.setText(result);
+        }
 
     }
 
