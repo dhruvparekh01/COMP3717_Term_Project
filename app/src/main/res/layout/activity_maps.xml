@@ -17,11 +17,13 @@
         android:orientation="vertical">
 
         <EditText
+            android:id="@+id/starting_position_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/start">
         </EditText>
         <EditText
+            android:id="@+id/destination_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/destination">
