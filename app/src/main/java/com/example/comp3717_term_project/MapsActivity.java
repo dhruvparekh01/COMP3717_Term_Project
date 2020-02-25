@@ -27,6 +27,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private ArrayList<SpeedSign> speedSigns;
+    private ArrayList<WarningSign> warnSigns;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,34 +59,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        System.out.println("Ready");
-//        mMap = googleMap;
-//
-//        // Add a marker in Sydney and move the camera
-//        LatLng sydney = new LatLng(49.249612, -123.000830);
-//        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        mMap = googleMap;
+
+        // Add a marker in Sydney and move the camera
+        LatLng sydney = new LatLng(49.249612, -123.000830);
+        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
     }
 
 
     public void getAssetJsonData(Context context) {
-        String json = null;
+        String jsonSpeed = null;
+        String jsonWarn = null;
         try {
-            InputStream is = context.getAssets().open("SPEED_SIGNS_AND_TABS.json");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            json = new String(buffer, "UTF-8");
-            Gson gson = new Gson();
-            SpeedSignsArray speedArr = gson.fromJson(json, SpeedSignsArray.class);
-            speedSigns = speedArr.getSpeedSigns();
+            InputStream iss = context.getAssets().open("SPEED_SIGNS_AND_TABS.json");
+            InputStream isw = context.getAssets().open("WARNING_SIGNS.json");
+            int sizeS = iss.available();
+            byte[] bufferS = new byte[sizeS];
+            iss.read(bufferS);
+            iss.close();
+            jsonSpeed = new String(bufferS, "UTF-8");
 
+            int sizeW = isw.available();
+            byte[] bufferW = new byte[sizeW];
+            isw.read(bufferW);
+            isw.close();
+            jsonWarn = new String(bufferW, "UTF-8");
+
+            Gson gson = new Gson();
+            SpeedSignsArray speedArr = gson.fromJson(jsonSpeed, SpeedSignsArray.class);
+            WarningSignsArray warnArr = gson.fromJson(jsonWarn, WarningSignsArray.class);
+
+            speedSigns = speedArr.getSpeedSigns();
+            warnSigns = warnArr.getWarnSigns();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        Log.e("data", json);
+        Log.e("SpeedData", jsonSpeed);
+        Log.e("WarnData", jsonWarn);
 
     }
 
