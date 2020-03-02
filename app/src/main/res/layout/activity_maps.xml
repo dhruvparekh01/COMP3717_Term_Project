@@ -22,12 +22,22 @@
             android:layout_height="wrap_content"
             android:hint="@string/start">
         </EditText>
-        <EditText
-            android:id="@+id/destination_edit_text"
+<!--        <EditText-->
+<!--            android:id="@+id/destination_edit_text"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:hint="@string/destination">-->
+<!--        </EditText>-->
+        <fragment android:id="@+id/autocomplete_fragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/destination">
-        </EditText>
+            android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment" />
+
+        <Button
+            android:id="@+id/search_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/search_text"/>
 
     </LinearLayout>
 
