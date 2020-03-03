@@ -3,19 +3,17 @@ package com.example.comp3717_term_project;
 import androidx.fragment.app.FragmentActivity;
 
 import android.content.Context;
-
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
 import com.example.comp3717_term_project.utils.MapUtils;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -28,6 +26,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
 import com.google.gson.Gson;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,7 +47,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
     private ArrayList<SpeedSign> speedSigns;
-    private ArrayAdapter<String> mAutocompleteAdapter;
+    private ArrayList<WarningSign> warnSigns;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,10 +61,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         this.getAssetJsonData(getApplicationContext());
         mStartDestinationEditText = findViewById(R.id.start_dest_edit);
         mSearchButton = findViewById(R.id.search_btn);
-
-        mAutocompleteAdapter = new ArrayAdapter<>(MapsActivity.this, R.layout.layout_maps_autocomplete_item);
-        mStartDestinationEditText.setAdapter(mAutocompleteAdapter);
-        // mSearchBounds = RectangularBounds.newInstance()
     }
 
 
@@ -105,23 +100,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void getAssetJsonData(Context context) {
-        String json = null;
+        String jsonSpeed = null;
+        String jsonWarn = null;
         try {
-            InputStream is = context.getAssets().open("SPEED_SIGNS_AND_TABS.json");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            json = new String(buffer, "UTF-8");
-            Gson gson = new Gson();
-            SpeedSignsArray speedArr = gson.fromJson(json, SpeedSignsArray.class);
-            speedSigns = speedArr.getSpeedSigns();
+            InputStream iss = context.getAssets().open("SPEED_SIGNS_AND_TABS.json");
+            InputStream isw = context.getAssets().open("WARNING_SIGNS.json");
+            int sizeS = iss.available();
+            byte[] bufferS = new byte[sizeS];
+            iss.read(bufferS);
+            iss.close();
+            jsonSpeed = new String(bufferS, "UTF-8");
 
+            int sizeW = isw.available();
+            byte[] bufferW = new byte[sizeW];
+            isw.read(bufferW);
+            isw.close();
+            jsonWarn = new String(bufferW, "UTF-8");
+
+            Gson gson = new Gson();
+            SpeedSignsArray speedArr = gson.fromJson(jsonSpeed, SpeedSignsArray.class);
+            WarningSignsArray warnArr = gson.fromJson(jsonWarn, WarningSignsArray.class);
+
+            speedSigns = speedArr.getSpeedSigns();
+            warnSigns = warnArr.getWarnSigns();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        Log.e("data", json);
+        Log.e("SpeedData", jsonSpeed);
+        Log.e("WarnData", jsonWarn);
+
     }
 
     private void setDestination(LatLng latlng) {
