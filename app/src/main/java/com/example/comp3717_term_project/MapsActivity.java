@@ -2,35 +2,50 @@ package com.example.comp3717_term_project;
 
 import androidx.fragment.app.FragmentActivity;
 
-import android.os.AsyncTask;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.EditText;
+import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
+import com.example.comp3717_term_project.utils.MapUtils;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import com.google.android.libraries.places.api.model.AutocompletePrediction;
+import com.google.android.libraries.places.api.model.RectangularBounds;
 import com.google.gson.Gson;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+
+    private static final String TAG = "MapsActivity";
 
     private GoogleMap mMap;
-    private EditText mStartDestinationEditText;
+    private AutoCompleteTextView mStartDestinationEditText;
+    private EditText mDestinationEditText;
+    private Button mSearchButton;
 
-    private LatLng startingLocation;
-    private LatLng destination;
+    private LatLng mStartingLatLng;
+    private LatLng mDestinationLatLng;
+    private Marker mDestinationMarker;
+    private RectangularBounds mSearchBounds;
     private ArrayList<SpeedSign> speedSigns;
     private ArrayList<WarningSign> warnSigns;
 
@@ -44,12 +59,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         this.getAssetJsonData(getApplicationContext());
-        EditText et = findViewById(R.id.start_dest_edit);
-
-        String x = speedSigns.get(1).properties.getSpeed();
-        int y = speedSigns.size();
-        String shit = "Speed: " + x + "; Size of Data: " + y;
-        et.setText(shit);
+        mStartDestinationEditText = findViewById(R.id.start_dest_edit);
+        mSearchButton = findViewById(R.id.search_btn);
     }
 
 
@@ -65,15 +76,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         System.out.println("Ready");
-//        mMap = googleMap;
-//
-//        mMap.setOnMarkerClickListener(this);
-//
-//        startingLocation = new LatLng(49.249612, -123.000830);
-//        mMap.addMarker(new MarkerOptions().position(startingLocation).title("Starting Location"));
-//        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startingLocation, 14F));
-//        GeocodingTask task = new GeocodingTask();
-//        task.execute(startingLocation);
+        mMap = googleMap;
+
+        mStartingLatLng = new LatLng(49.249612, -123.000830);
+        mMap.addMarker(new MarkerOptions().position(mStartingLatLng).title("Starting Location"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mStartingLatLng, 14F));
+
+        String locationName = MapUtils.getAddressLineByLatLng(this, mStartingLatLng);
+        mStartDestinationEditText.setText(locationName);
+        GoogleMapsAutocompleteSearchTextView customFragment = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment);
+        customFragment.setHint("Search Location");
+        customFragment.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+                setDestination(targetLatlng);
+                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
+            }
+        });
     }
 
 
@@ -110,8 +132,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-        return false;
+    private void setDestination(LatLng latlng) {
+        if (mDestinationMarker != null) {
+            mDestinationMarker.remove();
+        }
+        mDestinationLatLng = latlng;
+        LatLngBounds.Builder builder = LatLngBounds.builder();
+        builder.include(mStartingLatLng);
+        builder.include(latlng);
+        LatLngBounds bounds = builder.build();
+
+        mDestinationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Destination"));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
     }
 }
