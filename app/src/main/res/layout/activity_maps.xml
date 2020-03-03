@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -16,23 +15,26 @@
         android:layout_marginStart="10dp"
         android:orientation="vertical">
 
-        <EditText
+        <AutoCompleteTextView
+            android:maxLines="1"
+            android:inputType="text"
+            android:completionThreshold="3"
             android:id="@+id/start_dest_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/start">
-        </EditText>
+        </AutoCompleteTextView>
 <!--        <EditText-->
 <!--            android:id="@+id/destination_edit_text"-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
 <!--            android:hint="@string/destination">-->
 <!--        </EditText>-->
-        <fragment android:id="@+id/autocomplete_fragment"
+        <fragment
+            android:id="@+id/google_maps_search_fragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment" />
-
+            class="com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView"/>
         <Button
             android:id="@+id/search_btn"
             android:layout_width="match_parent"

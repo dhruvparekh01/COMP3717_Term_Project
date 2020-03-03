@@ -7,12 +7,15 @@ import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
+import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
 import com.example.comp3717_term_project.utils.MapUtils;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -21,32 +24,31 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
+
+import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Locale;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleMap.OnMarkerClickListener, Button.OnClickListener {
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
 
     private GoogleMap mMap;
-    private EditText mStartDestinationEditText;
+    private AutoCompleteTextView mStartDestinationEditText;
+    private EditText mDestinationEditText;
     private Button mSearchButton;
 
     private LatLng mStartingLatLng;
     private LatLng mDestinationLatLng;
+    private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
     private ArrayList<SpeedSign> speedSigns;
+    private ArrayAdapter<String> mAutocompleteAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,18 +59,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        if (!Places.isInitialized()) {
-            Places.initialize(getApplicationContext(), getString(R.string.google_maps_key), Locale.US);
-        }
-
-        initAutocomplete();
-
         this.getAssetJsonData(getApplicationContext());
         mStartDestinationEditText = findViewById(R.id.start_dest_edit);
         mSearchButton = findViewById(R.id.search_btn);
-        mSearchButton.setOnClickListener(this);
 
-
+        mAutocompleteAdapter = new ArrayAdapter<>(MapsActivity.this, R.layout.layout_maps_autocomplete_item);
+        mStartDestinationEditText.setAdapter(mAutocompleteAdapter);
         // mSearchBounds = RectangularBounds.newInstance()
     }
 
@@ -87,13 +83,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         System.out.println("Ready");
         mMap = googleMap;
 
-        mMap.setOnMarkerClickListener(this);
         mStartingLatLng = new LatLng(49.249612, -123.000830);
         mMap.addMarker(new MarkerOptions().position(mStartingLatLng).title("Starting Location"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mStartingLatLng, 14F));
 
         String locationName = MapUtils.getAddressLineByLatLng(this, mStartingLatLng);
         mStartDestinationEditText.setText(locationName);
+        GoogleMapsAutocompleteSearchTextView customFragment = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment);
+        customFragment.setHint("Search Location");
+        customFragment.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+                setDestination(targetLatlng);
+                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
+            }
+        });
     }
 
 
@@ -117,55 +124,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.e("data", json);
     }
 
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-        return false;
-    }
-
-    private void initAutocomplete() {
-
-        Log.i(TAG, "Initializing Autocomplete...");
-
-        // Initialize the AutocompleteSupportFragment.
-        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
-
-        // Specify the types of place data to return.
-        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
-        autocompleteFragment.setCountry("CA");
-
-        // Set up a PlaceSelectionListener to handle the response.
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(Place place) {
-                Log.i(TAG, "Place: " + place.getName() + ", " + place.getId());
-                //mDestinationLatLng = MapUtils.getLatLngFromLocationName(MapsActivity.this, place.getName());
-                mDestinationLatLng = place.getLatLng();
-            }
-
-            @Override
-            public void onError(Status status) {
-                // TODO: Handle the error.
-                Log.i(TAG, "An error occurred: " + status);
-            }
-        });
-    }
-
-    @Override
-    public void onClick(View v) {
-        if (v.getId() == R.id.search_btn) {
-            if (mDestinationLatLng != null) {
-                LatLngBounds.Builder builder = LatLngBounds.builder();
-                builder.include(mStartingLatLng);
-                builder.include(mDestinationLatLng);
-                LatLngBounds bounds = builder.build();
-
-                mMap.addMarker(new MarkerOptions().position(mDestinationLatLng).title("Destination"));
-                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
-
-            } else {
-                Toast.makeText(this, "Please enter destination", Toast.LENGTH_SHORT).show();
-            }
+    private void setDestination(LatLng latlng) {
+        if (mDestinationMarker != null) {
+            mDestinationMarker.remove();
         }
+        mDestinationLatLng = latlng;
+        LatLngBounds.Builder builder = LatLngBounds.builder();
+        builder.include(mStartingLatLng);
+        builder.include(latlng);
+        LatLngBounds bounds = builder.build();
+
+        mDestinationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Destination"));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
     }
 }
