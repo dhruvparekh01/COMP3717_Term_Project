@@ -126,29 +126,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
     }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume: hello world");
-        if (mBroadcastReceiver == null) {
-            mBroadcastReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    Log.d(TAG, "onReceive: " + intent.getExtras().get("lat"));
-                }
-            };
-        }
-        registerReceiver(mBroadcastReceiver, new IntentFilter("location_update"));
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (mBroadcastReceiver != null) {
-            unregisterReceiver(mBroadcastReceiver);
-        }
-    }
+    
 
 
     /**
