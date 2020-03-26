@@ -15,23 +15,22 @@
         android:layout_marginStart="10dp"
         android:orientation="vertical">
 
-        <AutoCompleteTextView
-            android:maxLines="1"
-            android:inputType="text"
-            android:completionThreshold="3"
-            android:id="@+id/start_dest_edit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/start">
-        </AutoCompleteTextView>
-<!--        <EditText-->
-<!--            android:id="@+id/destination_edit_text"-->
+<!--        <AutoCompleteTextView-->
+<!--            android:maxLines="1"-->
+<!--            android:inputType="text"-->
+<!--            android:completionThreshold="3"-->
+<!--            android:id="@+id/start_dest_edit"-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
-<!--            android:hint="@string/destination">-->
-<!--        </EditText>-->
+<!--            android:hint="@string/start">-->
+<!--        </AutoCompleteTextView>-->
         <fragment
-            android:id="@+id/google_maps_search_fragment"
+            android:id="@+id/google_maps_search_fragment_start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            class="com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView"/>
+        <fragment
+            android:id="@+id/google_maps_search_fragment_dest"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             class="com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView"/>

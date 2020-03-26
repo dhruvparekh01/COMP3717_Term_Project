@@ -8,9 +8,8 @@ import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
-import android.widget.EditText;
+
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
 import com.example.comp3717_term_project.utils.MapUtils;
 
@@ -38,11 +37,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String TAG = "MapsActivity";
 
     private GoogleMap mMap;
-    private AutoCompleteTextView mStartDestinationEditText;
-    private EditText mDestinationEditText;
     private Button mSearchButton;
 
-    private LatLng mStartingLatLng;
+    private LatLng mStartLocationLatLng;
+    private Marker mStartLocationMarker;
     private LatLng mDestinationLatLng;
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
@@ -59,7 +57,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         this.getAssetJsonData(getApplicationContext());
-        mStartDestinationEditText = findViewById(R.id.start_dest_edit);
         mSearchButton = findViewById(R.id.search_btn);
     }
 
@@ -78,13 +75,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         System.out.println("Ready");
         mMap = googleMap;
 
-        mStartingLatLng = new LatLng(49.249612, -123.000830);
-        mMap.addMarker(new MarkerOptions().position(mStartingLatLng).title("Starting Location"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mStartingLatLng, 14F));
+        setStartLocation(new LatLng(49.249612, -123.000830));
 
-        String locationName = MapUtils.getAddressLineByLatLng(this, mStartingLatLng);
-        mStartDestinationEditText.setText(locationName);
-        GoogleMapsAutocompleteSearchTextView customFragment = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment);
+        String locationName = MapUtils.getAddressLineByLatLng(this, mStartLocationLatLng);
+
+        GoogleMapsAutocompleteSearchTextView startLocationSearchFragment = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
+        startLocationSearchFragment.setHint("Start Location");
+        startLocationSearchFragment.setText(locationName);
+        startLocationSearchFragment.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+                setStartLocation(targetLatlng);
+                hideKeyboard(view);
+            }
+        });
+        GoogleMapsAutocompleteSearchTextView customFragment = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
         customFragment.setHint("Search Location");
         customFragment.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -92,8 +99,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
                 LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
                 setDestination(targetLatlng);
-                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
+                hideKeyboard(view);
             }
         });
     }
@@ -138,11 +144,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         mDestinationLatLng = latlng;
         LatLngBounds.Builder builder = LatLngBounds.builder();
-        builder.include(mStartingLatLng);
+        builder.include(mStartLocationLatLng);
         builder.include(latlng);
         LatLngBounds bounds = builder.build();
 
         mDestinationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Destination"));
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+    }
+
+    private void setStartLocation(LatLng latlng) {
+        if (mStartLocationMarker != null) {
+            mStartLocationMarker.remove();
+        }
+        mStartLocationLatLng = latlng;
+        LatLngBounds bounds = null;
+        if (mDestinationLatLng != null) {
+            LatLngBounds.Builder builder = LatLngBounds.builder();
+            builder.include(mDestinationLatLng);
+            builder.include(latlng);
+            bounds = builder.build();
+        }
+
+        mStartLocationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Start Location"));
+        if (bounds != null) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+        } else {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14F));
+        }
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
     }
 }
