@@ -68,4 +68,8 @@ public class GoogleMapsAutocompleteSearchTextView extends Fragment implements Te
     public void setOnItemClickListener(AdapterView.OnItemClickListener listener) {
         mSearchTextView.setOnItemClickListener(listener);
     }
+
+    public void setText(String text) {
+        mSearchTextView.setText(text);
+    }
 }
