@@ -9,37 +9,44 @@ public class SpeedSign implements Serializable {
 
     @SerializedName("properties")
     @Expose
-    public PropertiesClass properties;
-    class PropertiesClass implements Serializable {
+    public SpeedProperties properties;
+    class SpeedProperties implements Serializable {
         @SerializedName("Speed")
         @Expose
-        private String speed;
-        public String getSpeed() {
+        private int speed;
+        public int getSpeed() {
             return speed;
         }
         public void setSpeed(String speed) {
-            this.speed = speed;
+            this.speed = Integer.valueOf(speed);
         }
 
         @SerializedName("X")
         @Expose
-        private String coord_long;
-        public String getCoord_long() {
+        private double coord_long;
+        public double getCoord_long() {
             return coord_long;
         }
         public void setCoord_long(String coord_long) {
-            this.coord_long = coord_long;
+            this.coord_long = Double.valueOf(coord_long);
         }
 
         @SerializedName("Y")
         @Expose
-        private String coord_lat;
-        public String getCoord_lat() {
+        private double coord_lat;
+        public double getCoord_lat() {
             return coord_lat;
         }
         public void setCoord_lat(String coord_lat) {
-            this.coord_lat = coord_lat;
+            this.coord_lat = Double.valueOf(coord_lat);
         }
     }
 
+    @SerializedName("street")
+    @Expose
+    private String street;
+    public String getStreet() { return street; }
+    public void setStreet(String street) {
+        this.street = street;
+    }
 }

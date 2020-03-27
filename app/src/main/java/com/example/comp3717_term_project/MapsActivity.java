@@ -69,7 +69,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
     private ArrayList<SpeedSign> speedSigns;
-    private ArrayList<WarningSign> warnSigns;
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
 
@@ -191,34 +190,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void getAssetJsonData(Context context) {
         String jsonSpeed = null;
-        String jsonWarn = null;
         try {
-            InputStream iss = context.getAssets().open("SPEED_SIGNS_AND_TABS.json");
-            InputStream isw = context.getAssets().open("WARNING_SIGNS.json");
+            InputStream iss = context.getAssets().open("SPEEDSIGNS.json");
             int sizeS = iss.available();
             byte[] bufferS = new byte[sizeS];
             iss.read(bufferS);
             iss.close();
             jsonSpeed = new String(bufferS, "UTF-8");
 
-            int sizeW = isw.available();
-            byte[] bufferW = new byte[sizeW];
-            isw.read(bufferW);
-            isw.close();
-            jsonWarn = new String(bufferW, "UTF-8");
-
             Gson gson = new Gson();
             SpeedSignsArray speedArr = gson.fromJson(jsonSpeed, SpeedSignsArray.class);
-            WarningSignsArray warnArr = gson.fromJson(jsonWarn, WarningSignsArray.class);
 
             speedSigns = speedArr.getSpeedSigns();
-            warnSigns = warnArr.getWarnSigns();
+
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
         Log.e("SpeedData", jsonSpeed);
-        Log.e("WarnData", jsonWarn);
 
     }
 
