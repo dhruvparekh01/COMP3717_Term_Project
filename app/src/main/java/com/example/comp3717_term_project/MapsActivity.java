@@ -7,8 +7,6 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -37,28 +35,28 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
-import com.google.gson.Gson;
 
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Hashtable;
-import java.util.List;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 100;
+
+    // A table to map streets to the speed signs in it
     private Hashtable<String, ArrayList<SpeedSign>> speedTable;
 
+    // instance of the map
     private GoogleMap mMap;
+
+    // an instance of Fused Location provider to get real time location data
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Button mSearchButton;
+
     private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
 
@@ -70,9 +68,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng mDestinationLatLng;
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
+
+    // Used for receiving notifications from the FusedLocationProviderApi when the device location has changed
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
 
+    // ! Add description here
     private BroadcastReceiver mBroadcastReceiver;
 
     private boolean mLocationPermissionGranted = false;
@@ -86,25 +87,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        ArrayList<SpeedSign> speedSigns = this.getAssetJsonData(getApplicationContext());
+        // Get the the speedTable map
+        speedTable = AssetData.getStreetTable(getApplicationContext());
 
-        for (SpeedSign ss: speedSigns) {
-            String key = ss.getStreet();
-            ArrayList<SpeedSign> tempList = speedTable.get(key);
-            tempList.add(ss);
-            speedTable.put(key, tempList);
-        }
-
+        // create an instance of Fused Location Provider client
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
         mSearchButton = findViewById(R.id.search_btn);
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
+
+        // Receive notifications from the FusedLocationProviderApi when the device location has changed
+        // use this location to move camera along with it
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
-                List<Location> locationList = locationResult.getLocations();
-                if (locationList.size() > 0) {
-                    //The last location in the list is the newest
-                    Location location = locationList.get(locationList.size() - 1);
+                Location location = locationResult.getLastLocation();
+                if (location != null) {
                     Log.i("MapsActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
                     mUserLastLocation= location;
                     if (mUserCurrentLocationMarker != null) {
@@ -117,13 +115,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         };
 
-        mSearchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        mSearchButton.setOnClickListener((v) -> {
                 if (mFusedLocationProviderClient != null) {
                     mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                 }
-            }
         });
     }
 
@@ -151,23 +146,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         System.out.println("Ready");
         mMap = googleMap;
 
+        // Create Location Request object to automatically update the user location every 3 seconds
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(3000);
         mLocationRequest.setFastestInterval(3000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
-
+        // Create Text boxes with auto complete
         mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
         mStartLocationTextView.setHint("Start Location");
-        mStartLocationTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-                setStartLocation(targetLatlng);
-                hideKeyboard(view);
-            }
+        mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
+            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+            setStartLocation(targetLatlng);
+            hideKeyboard(view);
         });
+
         mDestinationTextView= (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
         mDestinationTextView.setHint("Search Location");
         mDestinationTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -196,31 +190,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         updateUserLocationUI();
     }
 
-
-    public ArrayList<SpeedSign> getAssetJsonData(Context context) {
-        String jsonSpeed = null;
-        ArrayList<SpeedSign> speedSigns = null;
-        try {
-            InputStream iss = context.getAssets().open("SPEEDSIGNS.json");
-            int sizeS = iss.available();
-            byte[] bufferS = new byte[sizeS];
-            iss.read(bufferS);
-            iss.close();
-            jsonSpeed = new String(bufferS, "UTF-8");
-
-            Gson gson = new Gson();
-            SpeedSignsArray speedArr = gson.fromJson(jsonSpeed, SpeedSignsArray.class);
-
-            speedSigns = speedArr.getSpeedSigns();
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        Log.e("SpeedData", jsonSpeed);
-
-        return speedSigns;
-    }
 
     private void setDestination(LatLng latlng) {
         if (mDestinationMarker != null) {
@@ -299,18 +268,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         try {
             if (mLocationPermissionGranted) {
                 mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
-                        (this, new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            mUserLastLocation = location;
-                            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                            setStartLocation(latLng);
-                            String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
-                            mStartLocationTextView.setText(locationName);
-                        }
-                    }
-                });
+                        (this, location -> {
+                            if (location != null) {
+                                mUserLastLocation = location;
+                                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                                setStartLocation(latLng);
+                                String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+                                mStartLocationTextView.setText(locationName);
+                            }
+                        });
             } else {
                 Log.e(TAG, "getDeviceLocation: permission denied");
             }
