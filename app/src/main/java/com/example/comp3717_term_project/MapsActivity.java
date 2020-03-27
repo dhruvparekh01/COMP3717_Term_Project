@@ -180,11 +180,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         mLocationPermissionGranted = false;
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    mLocationPermissionGranted = true;
-                }
+        if (requestCode == PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mLocationPermissionGranted = true;
             }
         }
         updateUserLocationUI();
@@ -266,20 +264,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getDeviceLocation() {
         try {
-            if (mLocationPermissionGranted) {
-                mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
-                        (this, location -> {
-                            if (location != null) {
-                                mUserLastLocation = location;
-                                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                                setStartLocation(latLng);
-                                String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
-                                mStartLocationTextView.setText(locationName);
-                            }
-                        });
-            } else {
+            if (!mLocationPermissionGranted) {
                 Log.e(TAG, "getDeviceLocation: permission denied");
+                return;
             }
+            mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(this, location -> {
+                if (location != null) {
+                    mUserLastLocation = location;
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    setStartLocation(latLng);
+                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+                    mStartLocationTextView.setText(locationName);
+                }
+            });
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: " + e.getMessage());
         }
