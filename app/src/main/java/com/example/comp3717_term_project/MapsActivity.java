@@ -46,6 +46,7 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
 
@@ -53,6 +54,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private static final String TAG = "MapsActivity";
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 100;
+    private Hashtable<String, ArrayList<SpeedSign>> speedTable;
 
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
@@ -68,7 +70,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng mDestinationLatLng;
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
-    private ArrayList<SpeedSign> speedSigns;
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
 
@@ -85,7 +86,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        this.getAssetJsonData(getApplicationContext());
+        ArrayList<SpeedSign> speedSigns = this.getAssetJsonData(getApplicationContext());
+
+        for (SpeedSign ss: speedSigns) {
+            String key = ss.getStreet();
+            ArrayList<SpeedSign> tempList = speedTable.get(key);
+            tempList.add(ss);
+            speedTable.put(key, tempList);
+        }
+
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mSearchButton = findViewById(R.id.search_btn);
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
@@ -188,8 +197,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    public void getAssetJsonData(Context context) {
+    public ArrayList<SpeedSign> getAssetJsonData(Context context) {
         String jsonSpeed = null;
+        ArrayList<SpeedSign> speedSigns = null;
         try {
             InputStream iss = context.getAssets().open("SPEEDSIGNS.json");
             int sizeS = iss.available();
@@ -209,6 +219,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Log.e("SpeedData", jsonSpeed);
 
+        return speedSigns;
     }
 
     private void setDestination(LatLng latlng) {
