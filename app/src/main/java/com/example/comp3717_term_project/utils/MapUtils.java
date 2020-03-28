@@ -31,7 +31,11 @@ public class MapUtils {
 
         if (addressList.size() > 0) {
             Address address = addressList.get(0);
-            return address.getFeatureName() + " " + address.getThoroughfare();
+            if (address.getThoroughfare() != null) {
+                return address.getFeatureName() + " " + address.getThoroughfare();
+            } else {
+                return address.getFeatureName();
+            }
         }
 
         return null;

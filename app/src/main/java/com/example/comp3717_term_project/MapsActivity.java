@@ -110,6 +110,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         mUserCurrentLocationMarker.remove();
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    // getSpeedSignByLatLng(latLng);
                     //move map camera
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14F));
                 }
@@ -304,5 +305,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
         mMap.getUiSettings().setScrollGesturesEnabled(true);
+    }
+
+    private void getSpeedSignByLatLng(LatLng latLng) {
+        String streetName = MapUtils.getAddressLineByLatLng(getApplicationContext(), latLng);
+        if (speedTable.contains(streetName)) {
+            Log.d(TAG, "getSpeedSignByCurrentLocation: " + "Worked");
+        } else {
+            Log.d(TAG, "getSpeedSignByCurrentLocation: didnt work");
+        }
     }
 }
