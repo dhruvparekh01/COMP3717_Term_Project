@@ -30,7 +30,7 @@ public class MapUtils {
         }
 
         if (addressList.size() > 0) {
-            return addressList.get(0).getAddressLine(0);
+            return addressList.get(0).getFeatureName();
         }
 
         return null;
