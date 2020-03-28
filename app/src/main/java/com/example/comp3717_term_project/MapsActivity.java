@@ -68,6 +68,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng mDestinationLatLng;
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
+    private boolean mIsNavigationTurnedOn = false;
 
     // Used for receiving notifications from the FusedLocationProviderApi when the device location has changed
     private LocationCallback mLocationCallback;
@@ -116,9 +117,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
 
         mSearchButton.setOnClickListener((v) -> {
-                if (mFusedLocationProviderClient != null) {
-                    mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-                }
+            if (!mIsNavigationTurnedOn) {
+                startNavigation();
+            } else {
+                stopNavigation();
+            }
         });
     }
 
@@ -174,7 +177,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
         updateUserLocationUI();
-        getDeviceLocation();
+        setStartLocationToCurrentLocation();
     }
 
     @Override
@@ -264,7 +267,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void getDeviceLocation() {
+    private void setStartLocationToCurrentLocation() {
         try {
             if (mLocationPermissionGranted) {
                 mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
@@ -283,5 +286,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: " + e.getMessage());
         }
+    }
+
+    private void startNavigation() {
+        mIsNavigationTurnedOn = true;
+        mSearchButton.setText("Stop Navigation");
+        if (mFusedLocationProviderClient != null) {
+            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+        }
+        mMap.getUiSettings().setScrollGesturesEnabled(false);
+    }
+
+    private void stopNavigation() {
+        mIsNavigationTurnedOn = false;
+        mSearchButton.setText("Get Routes");
+        if (mFusedLocationProviderClient != null) {
+            mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+        }
+        mMap.getUiSettings().setScrollGesturesEnabled(true);
     }
 }
