@@ -56,6 +56,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // an instance of Fused Location provider to get real time location data
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Button mSearchButton;
+    private Button mEndNavButton;
 
     private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
@@ -95,6 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         mSearchButton = findViewById(R.id.search_btn);
+        mEndNavButton = findViewById(R.id.endNavigation_btn);
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
 
         // Receive notifications from the FusedLocationProviderApi when the device location has changed
@@ -117,13 +119,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         };
 
+        setDisplay();
+
         mSearchButton.setOnClickListener((v) -> {
             if (!mIsNavigationTurnedOn) {
                 startNavigation();
-            } else {
-                stopNavigation();
+                setDisplay();
             }
         });
+
+        mEndNavButton.setOnClickListener((v) -> {
+            if (mIsNavigationTurnedOn) {
+                stopNavigation();
+                setDisplay();
+            }
+        });
+    }
+
+    public void setDisplay() {
+        View searchLayout = findViewById(R.id.search_layout);
+        View navLayout = findViewById(R.id.navigationLayout);
+        View searchFooter = findViewById(R.id.searchFooter);
+        View navFooter = findViewById(R.id.navigationFooter);
+        if (!mIsNavigationTurnedOn) {
+            searchLayout.setVisibility(searchLayout.VISIBLE);
+            searchFooter.setVisibility(searchFooter.VISIBLE);
+            navLayout.setVisibility(navLayout.GONE);
+            navFooter.setVisibility(navFooter.GONE);
+        } else {
+            searchLayout.setVisibility(searchLayout.GONE);
+            searchFooter.setVisibility(searchFooter.GONE);
+            navLayout.setVisibility(navLayout.VISIBLE);
+            navFooter.setVisibility(navFooter.VISIBLE);
+        }
     }
 
     @Override
@@ -291,7 +319,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void startNavigation() {
         mIsNavigationTurnedOn = true;
-        mSearchButton.setText(R.string.search_text2);
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
         }
@@ -300,7 +327,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void stopNavigation() {
         mIsNavigationTurnedOn = false;
-        mSearchButton.setText(R.string.search_text);
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
