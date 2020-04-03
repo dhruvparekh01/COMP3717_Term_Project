@@ -291,7 +291,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void startNavigation() {
         mIsNavigationTurnedOn = true;
-        mSearchButton.setText("Stop Navigation");
+        mSearchButton.setText(R.string.search_text2);
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
         }
@@ -300,7 +300,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void stopNavigation() {
         mIsNavigationTurnedOn = false;
-        mSearchButton.setText("Get Routes");
+        mSearchButton.setText(R.string.search_text);
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }

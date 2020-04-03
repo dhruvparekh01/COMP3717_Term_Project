@@ -1,5 +1,6 @@
 <resources>
     <string name="search_text">Get Routes</string>
+    <string name="search_text2">Stop Navigation</string>
     <string name="app_name">COMP3717_Term_Project</string>
     <string name="title_activity_maps">Map</string>
     <string name="destination">Destination</string>

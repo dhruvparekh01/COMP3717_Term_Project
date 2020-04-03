@@ -61,4 +61,13 @@ public class MapUtils {
 
         return null;
     }
+
+    public String getStreetName(String address) {
+        int index = address.indexOf(',');
+        String street = "";
+        if (index != -1) {
+            street= address.substring(0 , index); //this will give abc
+        }
+        return street;
+    }
 }
