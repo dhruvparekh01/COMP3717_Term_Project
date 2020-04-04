@@ -3,4 +3,8 @@
     <color name="colorPrimary">#008577</color>
     <color name="colorPrimaryDark">#00574B</color>
     <color name="colorAccent">#D81B60</color>
+    <color name="mainAppColor">#093E8D</color>
+    <color name="white">#ffffff</color>
+    <color name="transparentGreen">#5424FF00</color>
+    <color name="transparentRed">#54FF0000</color>
 </resources>

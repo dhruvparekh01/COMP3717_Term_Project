@@ -8,14 +8,18 @@ import androidx.fragment.app.FragmentActivity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
 
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
 import com.example.comp3717_term_project.utils.MapUtils;
@@ -56,7 +60,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // an instance of Fused Location provider to get real time location data
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Button mSearchButton;
-    private Button mEndNavButton;
+    private ImageView mEndNavButton;
 
     private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
@@ -141,6 +145,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         View navLayout = findViewById(R.id.navigationLayout);
         View searchFooter = findViewById(R.id.searchFooter);
         View navFooter = findViewById(R.id.navigationFooter);
+        View mapLayout = findViewById(R.id.mapLayout);
         if (!mIsNavigationTurnedOn) {
             searchLayout.setVisibility(searchLayout.VISIBLE);
             searchFooter.setVisibility(searchFooter.VISIBLE);
