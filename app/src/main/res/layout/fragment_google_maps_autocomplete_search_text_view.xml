@@ -9,7 +9,11 @@
         android:id="@+id/google_maps_autocomplete_text_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:padding="6dp"
         android:maxLines="1"
+        android:background="#ffffff"
+        android:textColor="#000000"
+        android:textSize="20sp"
         android:inputType="text"/>
 
 </FrameLayout>
