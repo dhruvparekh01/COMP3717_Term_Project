@@ -143,19 +143,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void setDisplay() {
         View searchLayout = findViewById(R.id.search_layout);
         View navLayout = findViewById(R.id.navigationLayout);
+        View speedLimLayout = findViewById(R.id.speedLimit_Layout);
         View searchFooter = findViewById(R.id.searchFooter);
         View navFooter = findViewById(R.id.navigationFooter);
-        View mapLayout = findViewById(R.id.mapLayout);
         if (!mIsNavigationTurnedOn) {
             searchLayout.setVisibility(searchLayout.VISIBLE);
             searchFooter.setVisibility(searchFooter.VISIBLE);
             navLayout.setVisibility(navLayout.GONE);
             navFooter.setVisibility(navFooter.GONE);
+            speedLimLayout.setVisibility(speedLimLayout.GONE);
         } else {
             searchLayout.setVisibility(searchLayout.GONE);
             searchFooter.setVisibility(searchFooter.GONE);
             navLayout.setVisibility(navLayout.VISIBLE);
             navFooter.setVisibility(navFooter.VISIBLE);
+            speedLimLayout.setVisibility(speedLimLayout.VISIBLE);
         }
     }
 
