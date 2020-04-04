@@ -20,6 +20,12 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ImageView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
 import com.example.comp3717_term_project.utils.MapUtils;
 
@@ -38,8 +44,15 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
+import com.google.maps.android.PolyUtil;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -83,6 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng mDestinationLatLng;
     private Marker mDestinationMarker;
     private RectangularBounds mSearchBounds;
+    private Polyline mRoutePolyLine;
     private boolean mIsNavigationTurnedOn = false;
 
     // Used for receiving notifications from the FusedLocationProviderApi when the device location has changed
@@ -273,7 +287,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
             LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-            setStartLocation(targetLatlng);
+            // setStartLocation(targetLatlng);
             hideKeyboard(view);
         });
 
@@ -281,7 +295,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mDestinationTextView.setHint(getString(R.string.destLoc));
         mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+            Log.d(TAG, "onMapReady: " + prediction.getFullText(null).toString());
             LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+            Log.d(TAG, "onMapReady: " + targetLatlng);
             setDestination(targetLatlng);
             hideKeyboard(view);
         });
@@ -398,7 +414,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
         }
+
         mMap.getUiSettings().setScrollGesturesEnabled(false);
+
+        String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.d(TAG, "onResponse: " + response);
+                        if (mRoutePolyLine != null) {
+                            mRoutePolyLine.remove();
+                        }
+
+                        try {
+                            List<LatLng> latLngs = new ArrayList<>();
+                            JSONArray jRoutes = new JSONObject(response).getJSONArray("routes");
+                            for (int i = 0; i < jRoutes.length(); i++) {
+                                JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
+                                for (int j = 0; j < jLegs.length(); j++) {
+                                    JSONArray jSteps = ((JSONObject)jLegs.get(j)).getJSONArray("steps");
+                                    for (int k = 0; k < jSteps.length(); k++) {
+                                        String polyline = "";
+                                        polyline = ((JSONObject)jSteps.get(k)).getJSONObject("polyline").getString("points");
+                                        Log.d(TAG, "onResponse: " + polyline);
+                                        List<LatLng> decodedLatLngs = PolyUtil.decode(polyline);
+                                        latLngs.addAll(decodedLatLngs);
+                                    }
+                                }
+                            }
+                            mRoutePolyLine = mMap.addPolyline(new PolylineOptions().
+                                    clickable(false)
+                                    .width(12)
+                                    .color(R.color.quantum_amberA700)
+                                    .addAll(latLngs));
+
+                        } catch (JSONException e) {
+                            Log.e(TAG, "onResponse: " + e.getMessage());
+                        }
+                                            }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, "onErrorResponse: " + error.getMessage());
+            }
+        });
+
+        // Add the request to the RequestQueue.
+        requestQueue.add(stringRequest);
+
     }
 
     private void stopNavigation() {
@@ -407,5 +472,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
         mMap.getUiSettings().setScrollGesturesEnabled(true);
+        if (mRoutePolyLine != null) {
+            mRoutePolyLine.remove();
+        }
     }
 }
