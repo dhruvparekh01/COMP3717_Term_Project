@@ -19,8 +19,8 @@ import java.util.Locale;
 import static android.content.ContentValues.TAG;
 
 class AssetData {
-    static Hashtable<String, ArrayList<Integer>> getStreetTable(Context context) throws IOException {
-        Hashtable<String, ArrayList<Integer>> speedTable = new Hashtable<>();
+    static Hashtable<String, ArrayList<SpeedSign>> getStreetTable(Context context) throws IOException {
+        Hashtable<String, ArrayList<SpeedSign>> speedTable = new Hashtable<>();
         Geocoder geocoder;
         geocoder = new Geocoder(context, Locale.getDefault());
         ArrayList<SpeedSign> speedSigns = getAssetJsonData(context);
@@ -33,7 +33,7 @@ class AssetData {
             List<Address> addresse = geocoder.getFromLocation(lat, lon, 1);
             String key = addresse.get(0).getThoroughfare();
 
-            ArrayList<Integer> tempList;
+            ArrayList<SpeedSign> tempList;
             try {
                 tempList = speedTable.get(key);
             }catch (NullPointerException e) {
@@ -44,7 +44,7 @@ class AssetData {
             if (tempList == null)
                 tempList = new ArrayList<>(1);
 
-            tempList.add(ss.properties.getSpeed());
+            tempList.add(ss);
             speedTable.put(key, tempList);
         }
 

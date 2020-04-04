@@ -162,7 +162,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         String street = addresse.get(0).getThoroughfare();
                         try {
                             int tempSpeedLimit = speedTable.get(street).get(0);
-                            
+
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
                             e.printStackTrace();
