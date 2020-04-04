@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageView;
 
@@ -44,6 +45,7 @@ import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -65,6 +67,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Button mSearchButton;
     private ImageView mEndNavButton;
+    private TextView tv_SpeedLimit;
+    private TextView tv_CurrentSpeed;
+    private static DecimalFormat df2 = new DecimalFormat("#.##");
 
     int speedLimit;
     double currSpeed;
@@ -117,6 +122,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mSearchButton = findViewById(R.id.search_btn);
         mEndNavButton = findViewById(R.id.endNavigation_btn);
+        tv_CurrentSpeed = findViewById(R.id.userSpeed);
+        tv_SpeedLimit = findViewById(R.id.speedLimitText);
+        View speedLimLayout = findViewById(R.id.speedLimit_Layout);
+
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
 
         allUserLocations = new ArrayList<>(0);
@@ -135,8 +144,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     currSpeed = location.getSpeed();
+
+                    if (currSpeed < speedLimit) {
+                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
+                    } else if (currSpeed > speedLimit + 5) {
+                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
+                    }
+
+                    tv_CurrentSpeed.setText(df2.format(currSpeed));
+                    tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20F));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 21));
                 }
             }
         };
@@ -174,6 +192,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         try {
                             SpeedSign temp = speedTable.get(street).get(0);
                             speedLimit = temp.properties.getSpeed();
+//                            tv_SpeedLimit.setText(Integer.toString(speedLimit));
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
                             e.printStackTrace();
@@ -324,7 +343,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mMap == null) {
             return;
         }
-
         try {
             if (mLocationPermissionGranted) {
                 mMap.setMyLocationEnabled(true);
@@ -334,7 +352,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
                 getLocationPermission();
             }
-
         } catch (SecurityException e) {
             Log.e(TAG, "updateUserLocationUI: " + e.getMessage());
         }
