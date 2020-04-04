@@ -55,7 +55,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 100;
 
     // A table to map streets to the speed signs in it
-    private Hashtable<String, ArrayList<Integer>> speedTable;
+    private Hashtable<String, ArrayList<SpeedSign>> speedTable;
 
     // instance of the map
     private GoogleMap mMap;
@@ -161,8 +161,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         List<Address> addresse = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
                         String street = addresse.get(0).getThoroughfare();
                         try {
-                            int tempSpeedLimit = speedTable.get(street).get(0);
-
+                            SpeedSign temp = speedTable.get(street).get(0);
+                            
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
                             e.printStackTrace();
