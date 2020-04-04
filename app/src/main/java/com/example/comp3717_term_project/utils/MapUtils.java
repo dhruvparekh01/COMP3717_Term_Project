@@ -7,6 +7,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.example.comp3717_term_project.R;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.IOException;
@@ -66,7 +67,7 @@ public class MapUtils {
         int index = address.indexOf(',');
         String street = "";
         if (index != -1) {
-            street= address.substring(0 , index); //this will give abc
+            street= address.substring(0 , index);
         }
         return street;
     }

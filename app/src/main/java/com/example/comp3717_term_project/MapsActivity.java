@@ -16,10 +16,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.ImageView;
 
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
@@ -27,7 +25,6 @@ import com.example.comp3717_term_project.utils.MapUtils;
 
 
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -272,7 +269,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Create Text boxes with auto complete
         mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
-        mStartLocationTextView.setHint("Start Location");
+        mStartLocationTextView.setHint(getString(R.string.startLoc));
         mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
             LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
@@ -281,7 +278,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         mDestinationTextView= (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
-        mDestinationTextView.setHint("Search Location");
+        mDestinationTextView.setHint(getString(R.string.destLoc));
         mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
             LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());

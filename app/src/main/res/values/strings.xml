@@ -5,6 +5,9 @@
     <string name="destination">Destination</string>
     <string name="start">Starting Point</string>
 
+    <string name="startLoc">Start Location</string>
+    <string name="destLoc">Destination</string>
+
     <string name="speedlimit">km/h</string>
     <string name="speedlimitLabel">Speed Limit:</string>
     <string name="yourSpeed">Your Speed:</string>
