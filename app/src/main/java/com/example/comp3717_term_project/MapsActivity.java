@@ -65,6 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Button mSearchButton;
 
     int speedLimit;
+    double currSpeed;
 
     private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
@@ -129,18 +130,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         mUserCurrentLocationMarker.remove();
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-//                    speedLimit
-//                    Log.d("====================", location.getSpeed()+"kmph");
+                    currSpeed = location.getSpeed();
                     //move map camera
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20F));
                 }
             }
-//
-//            @Override
-//            public void onLocationAvailability(LocationAvailability locationAvailability) {
-//                super.onLocationAvailability(locationAvailability);
-//                Log.d("==================", "FUCK AND SHIT!!!!!!!!!!!!!!!!!!");
-//            }
         };
 
         mSearchButton.setOnClickListener((v) -> {
@@ -162,7 +156,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         String street = addresse.get(0).getThoroughfare();
                         try {
                             SpeedSign temp = speedTable.get(street).get(0);
-                            
+                            speedLimit = temp.properties.getSpeed();
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
                             e.printStackTrace();
