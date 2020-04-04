@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -79,6 +80,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ImageView mEndNavButton;
     private TextView tv_SpeedLimit;
     private TextView tv_CurrentSpeed;
+    private TextView tv_CurrentStreet;
     private static DecimalFormat df2 = new DecimalFormat("#.##");
 
     int speedLimit;
@@ -135,6 +137,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mEndNavButton = findViewById(R.id.endNavigation_btn);
         tv_CurrentSpeed = findViewById(R.id.userSpeed);
         tv_SpeedLimit = findViewById(R.id.speedLimitText);
+        tv_CurrentStreet = findViewById(R.id.currentStreet);
         View speedLimLayout = findViewById(R.id.speedLimit_Layout);
 
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
@@ -149,12 +152,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
                     Log.i("MapsActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
-                    mUserLastLocation= location;
+                    mUserLastLocation = location;
                     if (mUserCurrentLocationMarker != null) {
                         mUserCurrentLocationMarker.remove();
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     currSpeed = location.getSpeed();
+                    String address = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
 
                     if (currSpeed < speedLimit) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
@@ -162,6 +166,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
                     }
 
+                    tv_CurrentStreet.setText(address);
                     tv_CurrentSpeed.setText(df2.format(currSpeed));
                     tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
@@ -197,13 +202,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 try {
                     while(true) {
                         sleep(5000);
-                        Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
+//                        Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
                         List<Address> addresse = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
                         String street = addresse.get(0).getThoroughfare();
                         try {
                             SpeedSign temp = speedTable.get(street).get(0);
                             speedLimit = temp.properties.getSpeed();
-//                            tv_SpeedLimit.setText(Integer.toString(speedLimit));
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
                             e.printStackTrace();
@@ -287,7 +291,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
             LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-            // setStartLocation(targetLatlng);
+            setStartLocation(targetLatlng);
             hideKeyboard(view);
         });
 
@@ -410,59 +414,61 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startNavigation() {
-        mIsNavigationTurnedOn = true;
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
         }
 
         mMap.getUiSettings().setScrollGesturesEnabled(false);
 
-        String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Log.d(TAG, "onResponse: " + response);
-                        if (mRoutePolyLine != null) {
-                            mRoutePolyLine.remove();
-                        }
+        if (mDestinationLatLng != null && mStartLocationLatLng != null) {
+            mIsNavigationTurnedOn = true;
+            String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
+            RequestQueue requestQueue = Volley.newRequestQueue(this);
+            StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            Log.d(TAG, "onResponse: " + response);
+                            if (mRoutePolyLine != null) {
+                                mRoutePolyLine.remove();
+                            }
 
-                        try {
-                            List<LatLng> latLngs = new ArrayList<>();
-                            JSONArray jRoutes = new JSONObject(response).getJSONArray("routes");
-                            for (int i = 0; i < jRoutes.length(); i++) {
-                                JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
-                                for (int j = 0; j < jLegs.length(); j++) {
-                                    JSONArray jSteps = ((JSONObject)jLegs.get(j)).getJSONArray("steps");
-                                    for (int k = 0; k < jSteps.length(); k++) {
-                                        String polyline = "";
-                                        polyline = ((JSONObject)jSteps.get(k)).getJSONObject("polyline").getString("points");
-                                        Log.d(TAG, "onResponse: " + polyline);
-                                        List<LatLng> decodedLatLngs = PolyUtil.decode(polyline);
-                                        latLngs.addAll(decodedLatLngs);
+                            try {
+                                List<LatLng> latLngs = new ArrayList<>();
+                                JSONArray jRoutes = new JSONObject(response).getJSONArray("routes");
+                                for (int i = 0; i < jRoutes.length(); i++) {
+                                    JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
+                                    for (int j = 0; j < jLegs.length(); j++) {
+                                        JSONArray jSteps = ((JSONObject)jLegs.get(j)).getJSONArray("steps");
+                                        for (int k = 0; k < jSteps.length(); k++) {
+                                            String polyline = "";
+                                            polyline = ((JSONObject)jSteps.get(k)).getJSONObject("polyline").getString("points");
+                                            Log.d(TAG, "onResponse: " + polyline);
+                                            List<LatLng> decodedLatLngs = PolyUtil.decode(polyline);
+                                            latLngs.addAll(decodedLatLngs);
+                                        }
                                     }
                                 }
+                                mRoutePolyLine = mMap.addPolyline(new PolylineOptions().
+                                        clickable(false)
+                                        .width(12)
+                                        .color(R.color.quantum_amberA700)
+                                        .addAll(latLngs));
+
+                            } catch (JSONException e) {
+                                Log.e(TAG, "onResponse: " + e.getMessage());
                             }
-                            mRoutePolyLine = mMap.addPolyline(new PolylineOptions().
-                                    clickable(false)
-                                    .width(12)
-                                    .color(R.color.quantum_amberA700)
-                                    .addAll(latLngs));
-
-                        } catch (JSONException e) {
-                            Log.e(TAG, "onResponse: " + e.getMessage());
                         }
-                                            }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "onErrorResponse: " + error.getMessage());
-            }
-        });
+                    }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e(TAG, "onErrorResponse: " + error.getMessage());
+                }
+            });
 
-        // Add the request to the RequestQueue.
-        requestQueue.add(stringRequest);
+            // Add the request to the RequestQueue.
+            requestQueue.add(stringRequest);
+        }
 
     }
 

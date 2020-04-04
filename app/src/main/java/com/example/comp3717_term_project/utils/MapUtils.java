@@ -66,15 +66,6 @@ public class MapUtils {
         return null;
     }
 
-    public String getStreetName(String address) {
-        int index = address.indexOf(',');
-        String street = "";
-        if (index != -1) {
-            street= address.substring(0 , index);
-        }
-        return street;
-    }
-
     public static String getDirectionsAPIRequestURL(Context ctx, LatLng from, LatLng to) {
         String strOrigin = String.format("origin=%f,%f", from.latitude, from.longitude);
         String strDestination = String.format("destination=%f,%f", to.latitude, to.longitude);
