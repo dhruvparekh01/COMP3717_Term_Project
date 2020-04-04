@@ -1,8 +1,11 @@
 package com.example.comp3717_term_project;
 
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -10,24 +13,38 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Locale;
 
 import static android.content.ContentValues.TAG;
 
 class AssetData {
-    static Hashtable<String, ArrayList<SpeedSign>> getStreetTable(Context context) {
-        Hashtable<String, ArrayList<SpeedSign>> speedTable = new Hashtable<>();
-
+    static Hashtable<String, ArrayList<Integer>> getStreetTable(Context context) throws IOException {
+        Hashtable<String, ArrayList<Integer>> speedTable = new Hashtable<>();
+        Geocoder geocoder;
+        geocoder = new Geocoder(context, Locale.getDefault());
         ArrayList<SpeedSign> speedSigns = getAssetJsonData(context);
 
         // Create the speedTable map
         for (SpeedSign ss: speedSigns) {
-            String key = ss.getStreet();
+            double lat = ss.properties.getCoord_lat();
+            double lon = ss.properties.getCoord_long();
 
-            ArrayList<SpeedSign> tempList = speedTable.get(key);
+            List<Address> addresse = geocoder.getFromLocation(lat, lon, 1);
+            String key = addresse.get(0).getThoroughfare();
+
+            ArrayList<Integer> tempList;
+            try {
+                tempList = speedTable.get(key);
+            }catch (NullPointerException e) {
+                key = ss.getStreet();
+                tempList = speedTable.get(key);
+            }
+
             if (tempList == null)
                 tempList = new ArrayList<>(1);
 
-            tempList.add(ss);
+            tempList.add(ss.properties.getSpeed());
             speedTable.put(key, tempList);
         }
 
