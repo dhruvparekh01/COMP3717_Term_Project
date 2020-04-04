@@ -8,17 +8,17 @@ import androidx.fragment.app.FragmentActivity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.Toast;
 import android.widget.ImageView;
 
 import com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView;
@@ -26,6 +26,7 @@ import com.example.comp3717_term_project.utils.MapUtils;
 
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -42,8 +43,11 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.RectangularBounds;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Locale;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -62,10 +66,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Button mSearchButton;
     private ImageView mEndNavButton;
 
+    int speedLimit;
+    double currSpeed;
+
     private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
 
     private Location mUserLastLocation;
+    private ArrayList<Location> allUserLocations;
     private LatLng mDefaultLatLng;
     private LatLng mStartLocationLatLng;
     private Marker mUserCurrentLocationMarker;
@@ -82,6 +90,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // ! Add description here
     private BroadcastReceiver mBroadcastReceiver;
 
+    Geocoder geocoder;
+
     private boolean mLocationPermissionGranted = false;
 
     @Override
@@ -93,8 +103,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        geocoder = new Geocoder(this, Locale.getDefault());
+
         // Get the the speedTable map
-        speedTable = AssetData.getStreetTable(getApplicationContext());
+        try {
+            speedTable = AssetData.getStreetTable(getApplicationContext());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         // create an instance of Fused Location Provider client
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -102,6 +118,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mSearchButton = findViewById(R.id.search_btn);
         mEndNavButton = findViewById(R.id.endNavigation_btn);
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
+
+        allUserLocations = new ArrayList<>(0);
 
         // Receive notifications from the FusedLocationProviderApi when the device location has changed
         // use this location to move camera along with it
@@ -116,9 +134,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         mUserCurrentLocationMarker.remove();
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    // getSpeedSignByLatLng(latLng);
+                    currSpeed = location.getSpeed();
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14F));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20F));
                 }
             }
         };
@@ -126,6 +144,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setDisplay();
 
         mSearchButton.setOnClickListener((v) -> {
+            if (mFusedLocationProviderClient != null) {
+                mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+            }
             if (!mIsNavigationTurnedOn) {
                 startNavigation();
                 setDisplay();
@@ -138,6 +159,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 setDisplay();
             }
         });
+
+        startLocationUpdates();
+
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    while(true) {
+                        sleep(5000);
+                        Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
+                        List<Address> addresse = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
+                        String street = addresse.get(0).getThoroughfare();
+                        try {
+                            SpeedSign temp = speedTable.get(street).get(0);
+                            speedLimit = temp.properties.getSpeed();
+                            System.out.println("Speed limit: " + speedLimit);
+                        } catch (NullPointerException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                } catch (InterruptedException | IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        thread.start();
     }
 
     public void setDisplay() {
@@ -161,6 +210,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    private void startLocationUpdates() {
+        mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,
+                mLocationCallback,
+                Looper.getMainLooper());
+    }
+
+
     @Override
     public void onPause() {
         super.onPause();
@@ -168,8 +224,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
     }
-    
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startLocationUpdates();
+    }
 
     /**
      * Manipulates the map once available.
@@ -210,17 +270,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             hideKeyboard(view);
         });
         updateUserLocationUI();
-        setStartLocationToCurrentLocation();
+        getDeviceLocation();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         mLocationPermissionGranted = false;
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    mLocationPermissionGranted = true;
-                }
+        if (requestCode == PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mLocationPermissionGranted = true;
             }
         }
         updateUserLocationUI();
@@ -300,22 +358,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void setStartLocationToCurrentLocation() {
+    private void getDeviceLocation() {
         try {
             if (!mLocationPermissionGranted) {
                 Log.e(TAG, "getDeviceLocation: permission denied");
                 return;
             }
-            mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
-                (this, location -> {
-                    if (location == null)
-                        return;
+            mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(this, location -> {
+                if (location != null) {
                     mUserLastLocation = location;
+                    allUserLocations.add(location);
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     setStartLocation(latLng);
                     String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
                     mStartLocationTextView.setText(locationName);
-                    });
+                }
+            });
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: " + e.getMessage());
         }
