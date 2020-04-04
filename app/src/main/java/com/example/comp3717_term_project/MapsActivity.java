@@ -203,14 +203,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mDestinationTextView= (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
         mDestinationTextView.setHint("Search Location");
-        mDestinationTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-                setDestination(targetLatlng);
-                hideKeyboard(view);
-            }
+        mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
+            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+            setDestination(targetLatlng);
+            hideKeyboard(view);
         });
         updateUserLocationUI();
         setStartLocationToCurrentLocation();
@@ -305,20 +302,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setStartLocationToCurrentLocation() {
         try {
-            if (mLocationPermissionGranted) {
-                mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
-                        (this, location -> {
-                            if (location != null) {
-                                mUserLastLocation = location;
-                                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                                setStartLocation(latLng);
-                                String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
-                                mStartLocationTextView.setText(locationName);
-                            }
-                        });
-            } else {
+            if (!mLocationPermissionGranted) {
                 Log.e(TAG, "getDeviceLocation: permission denied");
+                return;
             }
+            mFusedLocationProviderClient.getLastLocation().addOnSuccessListener
+                (this, location -> {
+                    if (location == null)
+                        return;
+                    mUserLastLocation = location;
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    setStartLocation(latLng);
+                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+                    mStartLocationTextView.setText(locationName);
+                    });
         } catch (SecurityException e) {
             Log.e(TAG, "getDeviceLocation: " + e.getMessage());
         }
@@ -338,14 +335,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         }
         mMap.getUiSettings().setScrollGesturesEnabled(true);
-    }
-
-    private void getSpeedSignByLatLng(LatLng latLng) {
-        String streetName = MapUtils.getAddressLineByLatLng(getApplicationContext(), latLng);
-        if (speedTable.contains(streetName)) {
-            Log.d(TAG, "getSpeedSignByCurrentLocation: " + "Worked");
-        } else {
-            Log.d(TAG, "getSpeedSignByCurrentLocation: didnt work");
-        }
     }
 }
