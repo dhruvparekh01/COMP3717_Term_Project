@@ -347,12 +347,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mDestinationTextView.setHint(getString(R.string.destLoc));
         mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-//            if (prediction != null) {
-                Log.d(TAG, "onMapReady: " + prediction.getFullText(null).toString());
-                LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-                Log.d(TAG, "onMapReady: " + targetLatlng);
-                setDestination(targetLatlng);
-//            }
+            Log.d(TAG, "onMapReady: " + prediction.getFullText(null).toString());
+            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+            Log.d(TAG, "onMapReady: " + targetLatlng);
+            setDestination(targetLatlng);
             hideKeyboard(view);
         });
         updateUserLocationUI();
