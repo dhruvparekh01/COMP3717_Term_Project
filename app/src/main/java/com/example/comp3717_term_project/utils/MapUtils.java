@@ -50,7 +50,7 @@ public class MapUtils {
             addressList = geocoder.getFromLocationName(addressLine, 1);
             Log.d(TAG, "getLatLngFromLocationName: " + addressList.size());
         } catch (IOException e) {
-            Log.e(TAG, "getLatLngFromLocationName: Error Occured");
+            Log.e(TAG, "getLatLngFromLocationName: Error Occurred");
             Log.e(TAG, "getLatLngFromLocationName: " + e.getMessage());
             String errorMessage = e.getMessage();
             if (errorMessage != null) {

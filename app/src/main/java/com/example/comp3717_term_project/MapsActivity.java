@@ -186,7 +186,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     tv_CurrentSpeed.setText(df2.format(currSpeed));
                     tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18));
                 }
             }
         };
@@ -238,7 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             if (s != null)
                                 speedLimit = s.properties.getSpeed();
                             else if (changedStreet)
-                                speedLimit = 0;
+                                speedLimit = 50;
 
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
@@ -316,14 +316,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
         // Create Text boxes with auto complete
-        mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
-        mStartLocationTextView.setHint(getString(R.string.startLoc));
-        mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
-            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-            setStartLocation(targetLatlng);
-            hideKeyboard(view);
-        });
+//        mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
+//        mStartLocationTextView.setHint(getString(R.string.startLoc));
+//        mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
+//            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+//            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+//            setStartLocation(targetLatlng);
+//            hideKeyboard(view);
+//        });
 
         mDestinationTextView= (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
         mDestinationTextView.setHint(getString(R.string.destLoc));
@@ -435,7 +435,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     setStartLocation(latLng);
                     String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
-                    mStartLocationTextView.setText(locationName);
+//                    mStartLocationTextView.setText(locationName);
                 }
             });
         } catch (SecurityException e) {
