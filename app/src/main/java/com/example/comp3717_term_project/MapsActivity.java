@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import android.widget.ImageView;
 
@@ -61,11 +60,9 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -81,15 +78,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // an instance of Fused Location provider to get real time location data
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private Button mSearchButton;
-    private ImageView mEndNavButton;
     private TextView tv_SpeedLimit;
     private TextView tv_CurrentSpeed;
     private TextView tv_CurrentStreet;
     private static DecimalFormat df2 = new DecimalFormat("#.##");
 
     // variable to track current speed limit (0 means unknown)
-    int speedLimit;
+    int speedLimit = 50;
 
     // variable to track current speed of the user
     double currSpeed;
@@ -151,8 +146,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // create an instance of Fused Location Provider client
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-        mSearchButton = findViewById(R.id.search_btn);
-        mEndNavButton = findViewById(R.id.endNavigation_btn);
+        Button mSearchButton = findViewById(R.id.search_btn);
+        ImageView mEndNavButton = findViewById(R.id.endNavigation_btn);
         tv_CurrentSpeed = findViewById(R.id.userSpeed);
         tv_SpeedLimit = findViewById(R.id.speedLimitText);
         tv_CurrentStreet = findViewById(R.id.currentStreet);
@@ -193,7 +188,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     tv_CurrentSpeed.setText(df2.format(currSpeed));
                     tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
                 }
             }
         };
@@ -205,10 +200,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                 }
             if (!mIsNavigationTurnedOn) {
+                setStartLocationToCurrentLocation();
                 startNavigation();
                 setDisplay();
-                setStartLocationToCurrentLocation();
-                trackSpeed.start();
             }
         });
 
@@ -216,7 +210,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (mIsNavigationTurnedOn) {
                 stopNavigation();
                 setDisplay();
-                trackSpeed.stop();
             }
         });
 
@@ -228,7 +221,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void run() {
                 try {
-                    while(true) {
+                    while(mIsNavigationTurnedOn) {
                         sleep(3000);
                         Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
                         // get the last seen location and current location and see if user changed the street
@@ -257,7 +250,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             if (s != null)
                                 speedLimit = s.properties.getSpeed();
                             else if (changedStreet)
-                                speedLimit = 0;
+                                speedLimit = 50;
 
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
@@ -395,7 +388,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             bounds = builder.build();
         }
 
-        mStartLocationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Start Location"));
+//        mStartLocationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Start Location"));
         if (bounds != null) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
         } else {
