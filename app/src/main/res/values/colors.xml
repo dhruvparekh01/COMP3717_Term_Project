@@ -7,4 +7,5 @@
     <color name="white">#ffffff</color>
     <color name="transparentGreen">#5424FF00</color>
     <color name="transparentRed">#54FF0000</color>
+    <color name="transparentYellow">#54FFFF00</color>
 </resources>

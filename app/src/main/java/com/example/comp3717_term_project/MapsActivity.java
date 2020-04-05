@@ -180,6 +180,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     if (currSpeed < speedLimit) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
+                    } else if (currSpeed > speedLimit && currSpeed < speedLimit + 5) {
+                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentYellow));
                     } else if (currSpeed > speedLimit + 5) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
                     }
@@ -339,13 +341,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mDestinationTextView.setHint(getString(R.string.destLoc));
         mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-            if (prediction != null) {
+//            if (prediction != null) {
                 Log.d(TAG, "onMapReady: " + prediction.getFullText(null).toString());
                 LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
                 Log.d(TAG, "onMapReady: " + targetLatlng);
                 setDestination(targetLatlng);
-                hideKeyboard(view);
-            }
+//            }
+            hideKeyboard(view);
         });
         updateUserLocationUI();
         setStartLocationToCurrentLocation();
