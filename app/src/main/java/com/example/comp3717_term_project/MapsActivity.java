@@ -110,6 +110,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Polyline mRoutePolyLine;
     private boolean mIsNavigationTurnedOn = false;
 
+    private boolean stopSpeedTracking;
+
     // Used for receiving notifications from the FusedLocationProviderApi when the device location has changed
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
@@ -123,6 +125,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Thread trackSpeed;
 
     private boolean mLocationPermissionGranted = false;
+
+    public class TrackSpeed extends Thread {
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        @Override
+        public void run() {
+            try {
+                while(!stopSpeedTracking) {
+                    sleep(3000);
+                    Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
+                    // get the last seen location and current location and see if user changed the street
+                    List<Address> curAddress = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
+
+                    if (l2 == null) {
+                        continue;
+                    }
+                    List<Address> prevAddress = geocoder.getFromLocation(l2.getLatitude(), l2.getLongitude(), 1);
+                    boolean changedStreet;
+                    try {
+                        changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
+                    } catch (NullPointerException e) {
+                        continue;
+                    }
+
+                    String street = curAddress.get(0).getThoroughfare();
+                    try {
+                        // temp: list of all the speed signs on current street
+                        ArrayList<SpeedSign> temp = speedTable.get(street);
+
+                        // get the speed sign from the list that is applicable for the current location
+                        // returns null if none of them are applicable
+                        SpeedSign s = Helper.getBestSign(l2, mUserLastLocation, temp);
+
+                        if (s != null)
+                            speedLimit = s.properties.getSpeed();
+                        else if (changedStreet)
+                            speedLimit = 50;
+
+                        System.out.println("Speed limit:----------------------------------- " + speedLimit);
+                    } catch (NullPointerException e) {
+                        e.printStackTrace();
+                        System.out.println("-------------------------Fuck and shit");
+                    }
+                }
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -203,6 +253,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 setStartLocationToCurrentLocation();
                 startNavigation();
                 setDisplay();
+                stopSpeedTracking = false;
+                trackSpeed = new TrackSpeed();
+                trackSpeed.start();
             }
         });
 
@@ -210,58 +263,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (mIsNavigationTurnedOn) {
                 stopNavigation();
                 setDisplay();
+                stopSpeedTracking = true;
             }
         });
 
         startLocationUpdates();
-
-        // Thread to calculate speed limit for current location, refreshes every 5 seconds
-        trackSpeed = new Thread() {
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public void run() {
-                try {
-                    while(mIsNavigationTurnedOn) {
-                        sleep(3000);
-                        Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
-                        // get the last seen location and current location and see if user changed the street
-                        List<Address> curAddress = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
-
-                        if (l2 == null) {
-                            continue;
-                        }
-                        List<Address> prevAddress = geocoder.getFromLocation(l2.getLatitude(), l2.getLongitude(), 1);
-                        boolean changedStreet;
-                        try {
-                            changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
-                        } catch (NullPointerException e) {
-                            continue;
-                        }
-
-                        String street = curAddress.get(0).getThoroughfare();
-                        try {
-                            // temp: list of all the speed signs on current street
-                            ArrayList<SpeedSign> temp = speedTable.get(street);
-
-                            // get the speed sign from the list that is applicable for the current location
-                            // returns null if none of them are applicable
-                            SpeedSign s = Helper.getBestSign(l2, mUserLastLocation, temp);
-
-                            if (s != null)
-                                speedLimit = s.properties.getSpeed();
-                            else if (changedStreet)
-                                speedLimit = 50;
-
-                            System.out.println("Speed limit: " + speedLimit);
-                        } catch (NullPointerException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                } catch (InterruptedException | IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
     }
 
     private void startLocationUpdates() {
