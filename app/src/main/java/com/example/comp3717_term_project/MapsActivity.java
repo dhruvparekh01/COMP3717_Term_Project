@@ -125,6 +125,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // A geocoder variable to get street address from coordinates
     Geocoder geocoder;
 
+    Thread trackSpeed;
+
     private boolean mLocationPermissionGranted = false;
 
     @Override
@@ -174,7 +176,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     currSpeed = location.getSpeed();
-                    String address = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+                    Address address = null;
+                    try {
+                        address = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1).get(0);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
 
                     if (currSpeed < speedLimit) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
@@ -182,11 +189,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
                     }
 
-                    tv_CurrentStreet.setText(address);
+                    tv_CurrentStreet.setText(address.getThoroughfare());
                     tv_CurrentSpeed.setText(df2.format(currSpeed));
                     tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
                 }
             }
         };
@@ -196,11 +203,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mSearchButton.setOnClickListener((v) -> {
                 if (mFusedLocationProviderClient != null) {
                     mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-                    navigationOn = true;
                 }
             if (!mIsNavigationTurnedOn) {
                 startNavigation();
                 setDisplay();
+                setStartLocationToCurrentLocation();
+                trackSpeed.start();
             }
         });
 
@@ -208,24 +216,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (mIsNavigationTurnedOn) {
                 stopNavigation();
                 setDisplay();
+                trackSpeed.stop();
             }
         });
 
         startLocationUpdates();
 
         // Thread to calculate speed limit for current location, refreshes every 5 seconds
-        Thread thread = new Thread() {
+        trackSpeed = new Thread() {
             @RequiresApi(api = Build.VERSION_CODES.N)
             @Override
             public void run() {
                 try {
-                    while(navigationOn) {
-                        sleep(5000);
+                    while(true) {
+                        sleep(3000);
                         Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
                         // get the last seen location and current location and see if user changed the street
                         List<Address> curAddress = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
+
+                        if (l2 == null) {
+                            continue;
+                        }
                         List<Address> prevAddress = geocoder.getFromLocation(l2.getLatitude(), l2.getLongitude(), 1);
-                        boolean changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
+                        boolean changedStreet;
+                        try {
+                            changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
+                        } catch (NullPointerException e) {
+                            continue;
+                        }
 
                         String street = curAddress.get(0).getThoroughfare();
                         try {
@@ -235,10 +253,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             // get the speed sign from the list that is applicable for the current location
                             // returns null if none of them are applicable
                             SpeedSign s = Helper.getBestSign(l2, mUserLastLocation, temp);
+
                             if (s != null)
                                 speedLimit = s.properties.getSpeed();
                             else if (changedStreet)
-                                speedLimit = 50;
+                                speedLimit = 0;
 
                             System.out.println("Speed limit: " + speedLimit);
                         } catch (NullPointerException e) {
@@ -250,8 +269,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         };
-
-        thread.start();
     }
 
     private void startLocationUpdates() {
