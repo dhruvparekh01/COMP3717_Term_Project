@@ -15,6 +15,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -95,7 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // Boolean to track if the navigation is tuned on
     boolean navigationOn;
 
-    private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
+//    private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
 
     private Location mUserLastLocation;
@@ -119,12 +120,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // ! Add description here
     private BroadcastReceiver mBroadcastReceiver;
 
+    private TextToSpeech tts;
+
     // A geocoder variable to get street address from coordinates
     Geocoder geocoder;
 
     Thread trackSpeed;
 
     private boolean mLocationPermissionGranted = false;
+
+    private boolean warned = false;
 
     public class TrackSpeed extends Thread {
         @RequiresApi(api = Build.VERSION_CODES.N)
@@ -186,6 +191,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         geocoder = new Geocoder(this, Locale.getDefault());
         navigationOn = false;
 
+        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status != TextToSpeech.ERROR) {
+                    tts.setLanguage(Locale.US);
+                }
+            }
+        });
+
         // Get the the speedTable map
         try {
             speedTable = AssetData.getStreetTable(getApplicationContext());
@@ -230,10 +244,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     if (currSpeed < speedLimit) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
-                    } else if (currSpeed > speedLimit && currSpeed < speedLimit + 5) {
+                        warned = false;
+                    } else if ((currSpeed > speedLimit && currSpeed < speedLimit + 10) || (currSpeed < speedLimit - 10 && currSpeed > speedLimit - 25)) {
                         speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentYellow));
-                    } else if (currSpeed > speedLimit + 5) {
-                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
+                        warned = false;
+                    } else if (currSpeed > speedLimit + 10) {
+                        if (!warned) {
+                            speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
+                            tts.speak(getString(R.string.fastWarning),TextToSpeech.QUEUE_FLUSH,null,null);
+                            warned = true;
+                        }
                     }
 
                     tv_CurrentStreet.setText(address.getThoroughfare());
@@ -392,7 +412,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mDestinationLatLng != null) {
             LatLngBounds.Builder builder = LatLngBounds.builder();
             builder.include(mDestinationLatLng);
-            builder.include(latlng);
+            builder.include(mStartLocationLatLng);
             bounds = builder.build();
         }
 
@@ -400,7 +420,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (bounds != null) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
         } else {
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14F));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mStartLocationLatLng, 14F));
         }
     }
 
@@ -452,7 +472,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     allUserLocations.add(location);
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     setStartLocation(latLng);
-                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+//                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
 //                    mStartLocationTextView.setText(locationName);
                 }
             });
@@ -470,6 +490,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (mDestinationLatLng != null && mStartLocationLatLng != null) {
             mIsNavigationTurnedOn = true;
+            try {
+                Address destination = geocoder.getFromLocation(mDestinationLatLng.latitude, mDestinationLatLng.longitude, 1).get(0);
+                StringBuilder strReturnedAddress = new StringBuilder("");
+                String destName = "";
+                if (destination.getFeatureName() != null) {
+                    destName = destination.getFeatureName();
+                } else {
+                    for (int i = 0; i <= destination.getMaxAddressLineIndex(); i++) {
+                        strReturnedAddress.append(destination.getAddressLine(i)).append(" ");
+                    }
+                    destName = strReturnedAddress.toString();
+                }
+                String startingRouteMsg = getString(R.string.startingRouteMsg) + destName;
+                tts.speak(startingRouteMsg,TextToSpeech.QUEUE_FLUSH,null,null);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
             RequestQueue requestQueue = Volley.newRequestQueue(this);
             StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
