@@ -31,7 +31,7 @@ class Helper {
                 return null;
 
         // make a hash map of possible valid speed signs as key and distance of user from it as value
-        HashMap<SpeedSign, Double> valid = new HashMap<>(0);
+        HashMap<SpeedSign, Double> valid = new HashMap<>();
         for(SpeedSign s: speedSigns) {
             // get a location object from the speed sign
             Location target = new Location("");

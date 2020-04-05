@@ -14,21 +14,12 @@
         android:background="@color/mainAppColor"
         android:orientation="vertical">
 
-<!--        <AutoCompleteTextView-->
-<!--            android:maxLines="1"-->
-<!--            android:inputType="text"-->
-<!--            android:completionThreshold="3"-->
-<!--            android:id="@+id/start_dest_edit"-->
+<!--        <fragment-->
+<!--            android:id="@+id/google_maps_search_fragment_start"-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
-<!--            android:hint="@string/start">-->
-<!--        </AutoCompleteTextView>-->
-        <fragment
-            android:id="@+id/google_maps_search_fragment_start"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            class="com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView"/>
+<!--            android:layout_marginBottom="12dp"-->
+<!--            class="com.example.comp3717_term_project.custom_widgets.GoogleMapsAutocompleteSearchTextView"/>-->
         <fragment
             android:id="@+id/google_maps_search_fragment_dest"
             android:layout_width="match_parent"
@@ -41,14 +32,16 @@
         android:id="@+id/navigationLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center"
         android:padding="15dp"
         android:background="@color/mainAppColor"
         android:orientation="horizontal">
 
         <TextView
+            android:id="@+id/currentStreet"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="40sp"
+            android:textSize="28sp"
             android:textColor="@color/white"/>
     </LinearLayout>
 

@@ -1,13 +1,21 @@
 <resources>
     <string name="search_text">Start Route</string>
     <string name="app_name">COMP3717_Term_Project</string>
-    <string name="title_activity_maps">Map</string>
+    <string name="title_activity_maps">SafeTraveler</string>
     <string name="destination">Destination</string>
     <string name="start">Starting Point</string>
+
+    <string name="startLoc">Start Location</string>
+    <string name="destLoc">Destination</string>
 
     <string name="speedlimit">km/h</string>
     <string name="speedlimitLabel">Speed Limit:</string>
     <string name="yourSpeed">Your Speed:</string>
+
+    <string name="startingRouteMsg">Starting route to</string>
+
+    <string name="fastWarning">You are going over the speed limit! Please slow down.</string>
+    <string name="slowWarning">You driving well below the speed limit, are you OK?</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

@@ -50,7 +50,7 @@ public class MapUtils {
             addressList = geocoder.getFromLocationName(addressLine, 1);
             Log.d(TAG, "getLatLngFromLocationName: " + addressList.size());
         } catch (IOException e) {
-            Log.e(TAG, "getLatLngFromLocationName: Error Occured");
+            Log.e(TAG, "getLatLngFromLocationName: Error Occurred");
             Log.e(TAG, "getLatLngFromLocationName: " + e.getMessage());
             String errorMessage = e.getMessage();
             if (errorMessage != null) {
@@ -64,15 +64,6 @@ public class MapUtils {
         }
 
         return null;
-    }
-
-    public String getStreetName(String address) {
-        int index = address.indexOf(',');
-        String street = "";
-        if (index != -1) {
-            street= address.substring(0 , index); //this will give abc
-        }
-        return street;
     }
 
     public static String getDirectionsAPIRequestURL(Context ctx, LatLng from, LatLng to) {

@@ -15,13 +15,12 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import android.widget.ImageView;
 
@@ -36,7 +35,6 @@ import com.example.comp3717_term_project.utils.MapUtils;
 
 
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -61,8 +59,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
@@ -81,11 +79,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // an instance of Fused Location provider to get real time location data
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private Button mSearchButton;
-    private ImageView mEndNavButton;
+    private TextView tv_SpeedLimit;
+    private TextView tv_CurrentSpeed;
+    private TextView tv_CurrentStreet;
+    private static DecimalFormat df2 = new DecimalFormat("#.##");
 
     // variable to track current speed limit (0 means unknown)
-    int speedLimit;
+    int speedLimit = 50;
 
     // variable to track current speed of the user
     double currSpeed;
@@ -96,7 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // Boolean to track if the navigation is tuned on
     boolean navigationOn;
 
-    private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
+//    private GoogleMapsAutocompleteSearchTextView mStartLocationTextView;
     private GoogleMapsAutocompleteSearchTextView mDestinationTextView;
 
     private Location mUserLastLocation;
@@ -111,6 +111,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Polyline mRoutePolyLine;
     private boolean mIsNavigationTurnedOn = false;
 
+    private boolean stopSpeedTracking;
+
     // Used for receiving notifications from the FusedLocationProviderApi when the device location has changed
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
@@ -118,10 +120,64 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // ! Add description here
     private BroadcastReceiver mBroadcastReceiver;
 
+    private TextToSpeech tts;
+
     // A geocoder variable to get street address from coordinates
     Geocoder geocoder;
 
+    Thread trackSpeed;
+
     private boolean mLocationPermissionGranted = false;
+
+    private boolean warned = false;
+
+    public class TrackSpeed extends Thread {
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        @Override
+        public void run() {
+            try {
+                while(!stopSpeedTracking) {
+                    sleep(3000);
+                    Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
+                    // get the last seen location and current location and see if user changed the street
+                    List<Address> curAddress = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
+
+                    if (l2 == null) {
+                        continue;
+                    }
+                    List<Address> prevAddress = geocoder.getFromLocation(l2.getLatitude(), l2.getLongitude(), 1);
+                    boolean changedStreet;
+                    try {
+                        changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
+                    } catch (NullPointerException e) {
+                        continue;
+                    }
+
+                    String street = curAddress.get(0).getThoroughfare();
+                    try {
+                        // temp: list of all the speed signs on current street
+                        ArrayList<SpeedSign> temp = speedTable.get(street);
+
+                        // get the speed sign from the list that is applicable for the current location
+                        // returns null if none of them are applicable
+                        SpeedSign s = Helper.getBestSign(l2, mUserLastLocation, temp);
+
+                        if (s != null)
+                            speedLimit = s.properties.getSpeed();
+                        else if (changedStreet)
+                            speedLimit = 50;
+
+                        System.out.println("Speed limit:----------------------------------- " + speedLimit);
+                    } catch (NullPointerException e) {
+                        e.printStackTrace();
+                        System.out.println("-------------------------Fuck and shit");
+                    }
+                }
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +191,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         geocoder = new Geocoder(this, Locale.getDefault());
         navigationOn = false;
 
+        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status != TextToSpeech.ERROR) {
+                    tts.setLanguage(Locale.US);
+                }
+            }
+        });
+
         // Get the the speedTable map
         try {
             speedTable = AssetData.getStreetTable(getApplicationContext());
@@ -145,8 +210,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // create an instance of Fused Location Provider client
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-        mSearchButton = findViewById(R.id.search_btn);
-        mEndNavButton = findViewById(R.id.endNavigation_btn);
+        Button mSearchButton = findViewById(R.id.search_btn);
+        ImageView mEndNavButton = findViewById(R.id.endNavigation_btn);
+        tv_CurrentSpeed = findViewById(R.id.userSpeed);
+        tv_SpeedLimit = findViewById(R.id.speedLimitText);
+        tv_CurrentStreet = findViewById(R.id.currentStreet);
+        View speedLimLayout = findViewById(R.id.speedLimit_Layout);
+
         mDefaultLatLng = new LatLng(49.249612, -123.000830);
 
         allUserLocations = new ArrayList<>(0);
@@ -159,14 +229,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (location != null) {
                     Log.i("MapsActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
                     l2 = mUserLastLocation;
-                    mUserLastLocation= location;
+                    mUserLastLocation = location;
                     if (mUserCurrentLocationMarker != null) {
                         mUserCurrentLocationMarker.remove();
                     }
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     currSpeed = location.getSpeed();
+                    Address address = null;
+                    try {
+                        address = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1).get(0);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    if (currSpeed < speedLimit) {
+                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentGreen));
+                        warned = false;
+                    } else if ((currSpeed > speedLimit && currSpeed < speedLimit + 10) || (currSpeed < speedLimit - 10 && currSpeed > speedLimit - 25)) {
+                        speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentYellow));
+                        warned = false;
+                    } else if (currSpeed > speedLimit + 10) {
+                        if (!warned) {
+                            speedLimLayout.setBackgroundColor(getResources().getColor(R.color.transparentRed));
+                            tts.speak(getString(R.string.fastWarning),TextToSpeech.QUEUE_FLUSH,null,null);
+                            warned = true;
+                        }
+                    }
+
+                    tv_CurrentStreet.setText(address.getThoroughfare());
+                    tv_CurrentSpeed.setText(df2.format(currSpeed));
+                    tv_SpeedLimit.setText(Integer.toString(speedLimit));
                     //move map camera
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20F));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
                 }
             }
         };
@@ -176,11 +270,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mSearchButton.setOnClickListener((v) -> {
                 if (mFusedLocationProviderClient != null) {
                     mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-                    navigationOn = true;
                 }
             if (!mIsNavigationTurnedOn) {
+                setStartLocationToCurrentLocation();
                 startNavigation();
                 setDisplay();
+                stopSpeedTracking = false;
+                trackSpeed = new TrackSpeed();
+                trackSpeed.start();
             }
         });
 
@@ -188,50 +285,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (mIsNavigationTurnedOn) {
                 stopNavigation();
                 setDisplay();
+                stopSpeedTracking = true;
             }
         });
 
         startLocationUpdates();
-
-        // Thread to calculate speed limit for current location, refreshes every 5 seconds
-        Thread thread = new Thread() {
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public void run() {
-                try {
-                    while(navigationOn) {
-                        sleep(5000);
-                        Log.d(TAG, mUserLastLocation.getLatitude() + ", " + mUserLastLocation.getLongitude());
-                        // get the last seen location and current location and see if user changed the street
-                        List<Address> curAddress = geocoder.getFromLocation(mUserLastLocation.getLatitude(), mUserLastLocation.getLongitude(), 1);
-                        List<Address> prevAddress = geocoder.getFromLocation(l2.getLatitude(), l2.getLongitude(), 1);
-                        boolean changedStreet = !(prevAddress.get(0).getThoroughfare().equals(curAddress.get(0).getThoroughfare()));
-
-                        String street = curAddress.get(0).getThoroughfare();
-                        try {
-                            // temp: list of all the speed signs on current street
-                            ArrayList<SpeedSign> temp = speedTable.get(street);
-
-                            // get the speed sign from the list that is applicable for the current location
-                            // returns null if none of them are applicable
-                            SpeedSign s = Helper.getBestSign(l2, mUserLastLocation, temp);
-                            if (s != null)
-                                speedLimit = s.properties.getSpeed();
-                            else if (changedStreet)
-                                speedLimit = 0;
-
-                            System.out.println("Speed limit: " + speedLimit);
-                        } catch (NullPointerException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                } catch (InterruptedException | IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        thread.start();
     }
 
     private void startLocationUpdates() {
@@ -296,17 +354,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
         // Create Text boxes with auto complete
-        mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
-        mStartLocationTextView.setHint("Start Location");
-        mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
-            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
-            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
-            // setStartLocation(targetLatlng);
-            hideKeyboard(view);
-        });
+//        mStartLocationTextView = (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_start);
+//        mStartLocationTextView.setHint(getString(R.string.startLoc));
+//        mStartLocationTextView.setOnItemClickListener((parent, view, position, id) -> {
+//            AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
+//            LatLng targetLatlng = MapUtils.getLatLngFromLocationName(getApplicationContext(), prediction.getFullText(null).toString());
+//            setStartLocation(targetLatlng);
+//            hideKeyboard(view);
+//        });
 
         mDestinationTextView= (GoogleMapsAutocompleteSearchTextView) getSupportFragmentManager().findFragmentById(R.id.google_maps_search_fragment_dest);
-        mDestinationTextView.setHint("Search Location");
+        mDestinationTextView.setHint(getString(R.string.destLoc));
         mDestinationTextView.setOnItemClickListener((parent, view, position, id) -> {
             AutocompletePrediction prediction = (AutocompletePrediction) parent.getItemAtPosition(position);
             Log.d(TAG, "onMapReady: " + prediction.getFullText(null).toString());
@@ -354,15 +412,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mDestinationLatLng != null) {
             LatLngBounds.Builder builder = LatLngBounds.builder();
             builder.include(mDestinationLatLng);
-            builder.include(latlng);
+            builder.include(mStartLocationLatLng);
             bounds = builder.build();
         }
 
-        mStartLocationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Start Location"));
+//        mStartLocationMarker = mMap.addMarker(new MarkerOptions().position(latlng).title("Start Location"));
         if (bounds != null) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
         } else {
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14F));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mStartLocationLatLng, 14F));
         }
     }
 
@@ -370,7 +428,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mMap == null) {
             return;
         }
-
         try {
             if (mLocationPermissionGranted) {
                 mMap.setMyLocationEnabled(true);
@@ -380,7 +437,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
                 getLocationPermission();
             }
-
         } catch (SecurityException e) {
             Log.e(TAG, "updateUserLocationUI: " + e.getMessage());
         }
@@ -416,8 +472,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     allUserLocations.add(location);
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                     setStartLocation(latLng);
-                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
-                    mStartLocationTextView.setText(locationName);
+//                    String locationName = MapUtils.getAddressLineByLatLng(MapsActivity.this, latLng);
+//                    mStartLocationTextView.setText(locationName);
                 }
             });
         } catch (SecurityException e) {
@@ -426,59 +482,78 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startNavigation() {
-        mIsNavigationTurnedOn = true;
         if (mFusedLocationProviderClient != null) {
             mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
         }
 
         mMap.getUiSettings().setScrollGesturesEnabled(false);
 
-        String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Log.d(TAG, "onResponse: " + response);
-                        if (mRoutePolyLine != null) {
-                            mRoutePolyLine.remove();
-                        }
+        if (mDestinationLatLng != null && mStartLocationLatLng != null) {
+            mIsNavigationTurnedOn = true;
+            try {
+                Address destination = geocoder.getFromLocation(mDestinationLatLng.latitude, mDestinationLatLng.longitude, 1).get(0);
+                StringBuilder strReturnedAddress = new StringBuilder("");
+                String destName = "";
+                if (destination.getFeatureName() != null) {
+                    destName = destination.getFeatureName();
+                } else {
+                    for (int i = 0; i <= destination.getMaxAddressLineIndex(); i++) {
+                        strReturnedAddress.append(destination.getAddressLine(i)).append(" ");
+                    }
+                    destName = strReturnedAddress.toString();
+                }
+                String startingRouteMsg = getString(R.string.startingRouteMsg) + destName;
+                tts.speak(startingRouteMsg,TextToSpeech.QUEUE_FLUSH,null,null);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            String endpoint = MapUtils.getDirectionsAPIRequestURL(this, mStartLocationLatLng, mDestinationLatLng);
+            RequestQueue requestQueue = Volley.newRequestQueue(this);
+            StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            Log.d(TAG, "onResponse: " + response);
+                            if (mRoutePolyLine != null) {
+                                mRoutePolyLine.remove();
+                            }
 
-                        try {
-                            List<LatLng> latLngs = new ArrayList<>();
-                            JSONArray jRoutes = new JSONObject(response).getJSONArray("routes");
-                            for (int i = 0; i < jRoutes.length(); i++) {
-                                JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
-                                for (int j = 0; j < jLegs.length(); j++) {
-                                    JSONArray jSteps = ((JSONObject)jLegs.get(j)).getJSONArray("steps");
-                                    for (int k = 0; k < jSteps.length(); k++) {
-                                        String polyline = "";
-                                        polyline = ((JSONObject)jSteps.get(k)).getJSONObject("polyline").getString("points");
-                                        Log.d(TAG, "onResponse: " + polyline);
-                                        List<LatLng> decodedLatLngs = PolyUtil.decode(polyline);
-                                        latLngs.addAll(decodedLatLngs);
+                            try {
+                                List<LatLng> latLngs = new ArrayList<>();
+                                JSONArray jRoutes = new JSONObject(response).getJSONArray("routes");
+                                for (int i = 0; i < jRoutes.length(); i++) {
+                                    JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
+                                    for (int j = 0; j < jLegs.length(); j++) {
+                                        JSONArray jSteps = ((JSONObject)jLegs.get(j)).getJSONArray("steps");
+                                        for (int k = 0; k < jSteps.length(); k++) {
+                                            String polyline = "";
+                                            polyline = ((JSONObject)jSteps.get(k)).getJSONObject("polyline").getString("points");
+                                            Log.d(TAG, "onResponse: " + polyline);
+                                            List<LatLng> decodedLatLngs = PolyUtil.decode(polyline);
+                                            latLngs.addAll(decodedLatLngs);
+                                        }
                                     }
                                 }
+                                mRoutePolyLine = mMap.addPolyline(new PolylineOptions().
+                                        clickable(false)
+                                        .width(12)
+                                        .color(R.color.quantum_amberA700)
+                                        .addAll(latLngs));
+
+                            } catch (JSONException e) {
+                                Log.e(TAG, "onResponse: " + e.getMessage());
                             }
-                            mRoutePolyLine = mMap.addPolyline(new PolylineOptions().
-                                    clickable(false)
-                                    .width(12)
-                                    .color(R.color.quantum_amberA700)
-                                    .addAll(latLngs));
-
-                        } catch (JSONException e) {
-                            Log.e(TAG, "onResponse: " + e.getMessage());
                         }
-                                            }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "onErrorResponse: " + error.getMessage());
-            }
-        });
+                    }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e(TAG, "onErrorResponse: " + error.getMessage());
+                }
+            });
 
-        // Add the request to the RequestQueue.
-        requestQueue.add(stringRequest);
+            // Add the request to the RequestQueue.
+            requestQueue.add(stringRequest);
+        }
 
     }
 
