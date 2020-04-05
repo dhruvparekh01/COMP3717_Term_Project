@@ -1,7 +1,7 @@
 <resources>
     <string name="search_text">Start Route</string>
     <string name="app_name">COMP3717_Term_Project</string>
-    <string name="title_activity_maps">Map</string>
+    <string name="title_activity_maps">SafeTraveler</string>
     <string name="destination">Destination</string>
     <string name="start">Starting Point</string>
 
