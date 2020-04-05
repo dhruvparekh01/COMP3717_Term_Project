@@ -26,7 +26,8 @@ Application Walkthrough:
 		-An X button is also present for ending navigation
 
 Issues:
-A null pointer exception occurs on the Pixel 3 Api 28 emulator.
+-A null pointer exception occurs on the Pixel 3 Api 28 emulator.
 	-Can be fixed by using the Pixel 3 Api 29
 	-According to https://stackoverflow.com/questions/5205650/geocoder-getfromlocation-throws-ioexception-on-android-emulator
 	This is an emulator only error.
+-This project was made using Android Studio 3.6.2
