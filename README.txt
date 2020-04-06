@@ -50,9 +50,8 @@ Issues:
 	-According to https://stackoverflow.com/questions/5205650/geocoder-getfromlocation-throws-ioexception-on-android-emulator
 	This is an emulator only error.
 	-This error did not occur when tested on a physical Samsung Galaxy S7
--Upon initial install, the emulator may set the Google HQ as the users location despite
- having set the location in the options. This is an emulator issue, and can be resolved by
- closing the app entirely then restarting the app.
-    -This error did not occur when tested on a physical Samsung Galaxy S7
+-Upon initial install, the emulator may crash when searching for a destination. 
+This can be avoided by closing the app entirely once it first opens, then restarting the app. 
+	-This only occurs on the first run after installation
 -This project was made using Android Studio 3.6.2
 
