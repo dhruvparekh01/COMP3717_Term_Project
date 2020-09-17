@@ -3,6 +3,9 @@
 ## What is Safe Traveller?
 Safe Traveller is an android app that helps people to maintain the speed limit rules by displaying the speed limit of any street that the user is currently on. If the user crosses the speed limit, the app notifies the user and signifies the warning.
 
+## Download apk
+Check out the releases section of the repository to download the latest apk.
+
 ## App in use
 __Opening Screen__: Like any other navigation app, you are asked to enter your destination. Note that the map data is obtained from Google Maps API and the routing data is obtained from Google Directions API.
 <br>
